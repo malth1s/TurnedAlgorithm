@@ -1,0 +1,205 @@
+import random
+
+
+def set_deterministic_seed(seed_value=42):
+    """Set a seed for deterministic randomization."""
+    random.seed(seed_value)
+
+def initialize_game():
+    """Initialize the game with 10 players: 1 Leader, 1 Zombie, and 8 Players."""
+    all_players = [f"Player{i}" for i in range(1, 11)]
+    random.shuffle(all_players)
+
+    leader = all_players.pop(0)  # Assign the first player as the leader
+    zombie = all_players.pop(0)  # Assign the second player as the zombie
+    non_leader_players = all_players  # The remaining players
+
+    return leader, zombie, non_leader_players
+
+# Define named grouping styles
+GROUPING_STYLES = {
+    "Triad": [3, 3, 3],       # Three groups of 3
+    "Quartet-Quintet": [4, 5], # One group of 4, one group of 5
+    "Duo-Trio-Quad": [2, 3, 4] # One group of 2, one group of 3, one group of 4
+}
+
+# Assign a grouping name to each round
+ROUND_GROUP_SELECTION = {
+    1: "Triad",         # Risk Round 1 → Three groups of 3
+    2: "Quartet-Quintet",  # Mission Round 2 → One group of 4, one group of 5
+    3: "Duo-Trio-Quad",    # Risk Round 3 → One group of 2, one group of 3, one group of 4
+    5: "Triad",         # Mission Round 5 → Three groups of 3
+    6: "Quartet-Quintet",  # Risk Round 6 → One group of 4, one group of 5
+    7: "Duo-Trio-Quad"    # Mission Round 7* → One group of 2, one group of 3, one group of 4
+}
+
+def form_groups(non_leader_players, zombie, round_number):
+    """Form groups based on predefined named grouping styles."""
+    players_with_zombie = non_leader_players + [zombie]
+    random.shuffle(players_with_zombie)
+
+    grouping_name = ROUND_GROUP_SELECTION.get(round_number, "Triad")  # Default to "Triad"
+    group_sizes = GROUPING_STYLES[grouping_name]  # Fetch the group sizes from the named grouping
+    
+    groups = []
+    start = 0
+    for size in group_sizes:
+        groups.append(players_with_zombie[start:start + size])
+        start += size
+
+    return groups, grouping_name  # Return the groups and the grouping name used
+
+def initialize_game():
+    """Initialize the game with 10 players: 1 Leader, 1 Zombie, and 8 Players."""
+    all_players = [f"Player{i}" for i in range(1, 11)]
+    random.shuffle(all_players)
+
+    leader = all_players.pop(0)  # Assign the first player as the leader
+    zombie = all_players.pop(0)  # Assign the second player as the zombie
+    non_leader_players = all_players  # The remaining players
+
+    return leader, zombie, non_leader_players
+
+# Call this at the beginning of `run_game`
+set_deterministic_seed(42)  # You can change the number to get different fixed outputs
+
+def initialize_game():
+    """Initialize the game with 10 players: 1 Leader, 1 Zombie, and 8 Players."""
+    all_players = [f"Player{i}" for i in range(1, 11)]
+    random.shuffle(all_players)
+
+    leader = all_players.pop(0)  # Assign the first player as the leader
+    zombie = all_players.pop(0)  # Assign the second player as the zombie
+    non_leader_players = all_players  # The remaining players
+
+    return leader, zombie, non_leader_players
+
+def form_groups(non_leader_players, zombie):
+    """Form random groups including the zombie but excluding the leader."""
+    players_with_zombie = non_leader_players + [zombie]
+    random.shuffle(players_with_zombie)
+
+    # Possible group configurations
+    group_choices = [
+        [3, 3, 3],  # Three groups of 3
+        [4, 5],     # One group of 4, one group of 5
+        [2, 3, 4]   # One group of 2, one group of 3, one group of 4
+    ]
+    selected_grouping = random.choice(group_choices)
+
+    groups = []
+    start = 0
+    for size in selected_grouping:
+        groups.append(players_with_zombie[start:start + size])
+        start += size
+
+    return groups
+
+def mission_round(round_number, leader, zombie, non_leader_players, infected_players):
+    """Mission rounds where players report infection status in secret."""
+    print(f"Mission Round {round_number}")
+
+    groups = form_groups(non_leader_players, zombie)
+    mission_reports = []
+
+    print(f"Leader: {leader} (immune)")
+    print(f"Zombie: {zombie} (Infected)")
+
+    for group in groups:
+        print(f"Group: {group}")
+
+        # Determine actual infection count in the group
+        actual_infected_count = sum(1 for player in group if player in infected_players)
+
+        # Add one additional random infection status for uncertainty (except in Mission Round 7*)
+        reported_infected_count = actual_infected_count + random.choice([0, 1])
+
+        # Store mission report for Escape Round 8
+        mission_reports.append((group, reported_infected_count))
+
+        # Display reported infection count (but not identities)
+        print(f"  Infection Reports: {reported_infected_count} player(s) infected (identity unknown)")
+
+    print("\n" + "="*30 + "\n")
+
+    return mission_reports  # Return mission reports for Escape Round 8
+
+def escape_round_8(leader, zombie, infected_players, non_leader_players, mission_reports):
+    """Escape round where the leader chooses who boards the helicopter."""
+    print("Escape Round 8")
+
+    selected_players = set()
+
+    # Step 1: Prioritize groups that reported 0 infections
+    for group, reported_infected in mission_reports:
+        if reported_infected == 0:
+            selected_players.update(group)
+
+    # Step 2: If not enough players are selected, consider groups with 1 reported infection (uncertainty factor)
+    for group, reported_infected in mission_reports:
+        if reported_infected == 1 and len(selected_players) < 8:  # Set a target of 8 players
+            selected_players.update(group)
+
+    print(f"Leader: {leader} (immune)")
+    print(f"Zombie: {zombie} (Infected)")
+    print(f"Selected for escape: {selected_players}")
+
+    # Identify all actually healthy players (excluding the leader)
+    all_healthy_players = {player for player in non_leader_players if player not in infected_players}
+
+    # Step 3: Determine outcome
+    infected_on_board = {player for player in selected_players if player in infected_players}
+    healthy_left_behind = any(player in all_healthy_players and player not in selected_players for player in all_healthy_players)
+
+    if infected_on_board:
+        result = f"Zombies Win! Infected player(s) on board: {', '.join(infected_on_board)}"
+    elif healthy_left_behind:
+        result = "Zombies Win! A healthy player was left behind!"
+    else:
+        result = "Humans Win! All escaping players are healthy."
+
+    print(result)
+    print("\n" + "="*30 + "\n")
+
+    return result  # Return result for simulation summary
+
+
+def run_game(num_simulations):
+    """Run multiple simulations and track infection statistics."""
+    results_summary = {"Humans Win": 0, "Zombies Win": 0}
+
+    for sim in range(num_simulations):
+        print(f"\n=== Simulation {sim + 1} ===\n")
+
+        leader, zombie, non_leader_players = initialize_game()
+        infected_players = {zombie}  # Start with only the zombie infected
+        mission_reports = []
+
+        # Run Mission Rounds 2 and 5 and collect reports
+        for round_number in [2, 5]:
+            mission_reports.extend(mission_round(round_number, leader, zombie, non_leader_players, infected_players))
+
+        # Escape Round 8
+        result = escape_round_8(leader, zombie, infected_players, non_leader_players, mission_reports)
+
+        # Update results summary
+        if "Humans Win" in result:
+            results_summary["Humans Win"] += 1
+        else:
+            results_summary["Zombies Win"] += 1
+
+        # Display leader and zombie for this simulation
+        print(f"Simulation {sim + 1} Summary:")
+        print(f"  Leader: {leader}")
+        print(f"  Zombie: {zombie}")
+        print(f"  {result}")  # Display win/loss result
+
+    print(f"\nFinal Results after {num_simulations} simulations:")
+    print(f"  Humans Win: {results_summary['Humans Win']} times")
+    print(f"  Zombies Win: {results_summary['Zombies Win']} times")
+
+# Adjust the number of simulations here
+num_simulations = 1000
+# Change this number to run more or fewer simulations
+run_game(num_simulations)
+
